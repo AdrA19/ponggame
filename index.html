@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Template</title>
+    <title>Media Dashboard</title>
     <style>
         body {
             margin: 0;
@@ -13,7 +13,7 @@
             overflow-x: hidden;
         }
 
-        /* Top Bar - Hidden by default, shows only on hover */
+        /* Top Bar - Hidden by default, shows on hover when active */
         .top-bar {
             position: fixed;
             top: 10px;
@@ -27,6 +27,13 @@
 
         .top-bar:hover {
             opacity: 1;
+        }
+
+        /* Disable Top Bar completely when hidden */
+        body.is-hidden .top-bar {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
         .top-bar-btn {
@@ -99,6 +106,11 @@
 
         .media-content {
             display: none;
+            min-height: 100vh;
+            width: 100vw;
+            position: relative;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .media-content.show {
@@ -106,11 +118,13 @@
             flex-wrap: wrap;
             align-items: flex-start;
             gap: 20px;
-            padding: 20px;
-            position: relative;
         }
 
-        /* Top Left Corner Show/Hide Trigger */
+        body.is-hidden .media-content {
+            display: none !important;
+        }
+
+        /* Top-Left Corner Master Trigger */
         #toggleBtn {
             opacity: 0;
             position: fixed;
@@ -119,7 +133,7 @@
             width: 200px;
             height: 200px;
             cursor: default;
-            z-index: 25000;
+            z-index: 30000;
         }
 
         .media-wrapper {
@@ -127,9 +141,11 @@
             border: 2px solid #444;
             border-radius: 8px;
             overflow: hidden;
-            cursor: pointer;
+            cursor: move;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             display: inline-block;
+            background: #000;
+            user-select: none;
         }
 
         .media-wrapper video, 
@@ -137,7 +153,7 @@
             display: block;
             max-width: 100%;
             height: auto;
-            pointer-events: auto; 
+            pointer-events: none; 
         }
 
         .media-wrapper.initialized video,
@@ -147,7 +163,7 @@
             object-fit: cover;
         }
 
-        /* Video Controls - Show ONLY on media wrapper hover */
+        /* Controls Overlay */
         .controls-top-right {
             position: absolute;
             top: 8px;
@@ -169,9 +185,9 @@
             color: #ffffff;
             border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 6px;
-            width: 36px;
-            height: 36px;
-            font-size: 24px;
+            width: 32px;
+            height: 32px;
+            font-size: 20px;
             font-weight: bold;
             line-height: 1;
             display: flex;
@@ -181,7 +197,6 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.15s ease-in-out, background 0.2s;
-            user-select: none;
         }
 
         .resize-handle {
@@ -207,14 +222,13 @@
             border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 6px;
             padding: 6px 10px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 4px;
             transition: background 0.2s;
-            user-select: none;
         }
 
         .pip-btn:hover, .sound-btn:hover {
@@ -227,9 +241,7 @@
             border-color: #fff;
         }
 
-        .resize-handle:hover {
-            background: #fff;
-        }
+        .resize-handle:hover { background: #fff; }
 
         .resize-handle.nw { top: 0; left: 0; width: 10px; height: 10px; cursor: nwse-resize; }
         .resize-handle.ne { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
@@ -241,7 +253,7 @@
         .resize-handle.e { right: 0; top: 50%; transform: translateY(-50%); height: 20px; width: 6px; cursor: ew-resize; }
         .resize-handle.w { left: 0; top: 50%; transform: translateY(-50%); height: 20px; width: 6px; cursor: ew-resize; }
 
-        /* Fullscreen Clean Iframe Modal (No buttons) */
+        /* Fullscreen Clean Iframe Modal */
         .iframe-modal {
             display: none;
             position: fixed;
@@ -253,34 +265,31 @@
             z-index: 20000;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
         }
 
         .iframe-modal.show {
             display: flex;
         }
 
+        body.is-hidden .iframe-modal {
+            display: none !important;
+        }
+
         .iframe-container {
-            position: relative;
             width: 100vw;
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .iframe-container iframe {
             width: 100%;
             height: 100%;
             border: none;
-            aspect-ratio: 16 / 9;
-            object-fit: contain;
         }
     </style>
 </head>
-<body>
+<body class="is-hidden">
 
-    <!-- Top Bar Controls (Appears on Hover) -->
+    <!-- Top Bar Controls -->
     <div class="top-bar">
         <button id="gifreelsBtn" class="top-bar-btn">GifReels</button>
         <button id="hardgifBtn" class="top-bar-btn">HardGif</button>
@@ -294,8 +303,8 @@
         </div>
     </div>
 
-    <!-- Invisible Corner Trigger Button -->
-    <button id="toggleBtn"></button>
+    <!-- Master Top-Left Corner Toggle Button -->
+    <button id="toggleBtn" aria-label="Toggle Dashboard"></button>
     <div id="mediaContainer" class="media-content"></div>
 
     <!-- Clean Fullscreen Iframe Modal -->
@@ -319,6 +328,10 @@
         const iframeModal = document.getElementById('iframeModal');
         const activeIframe = document.getElementById('activeIframe');
 
+        let isAppVisible = false;
+        let isLayoutInitialized = false;
+        let maxZIndex = 100;
+
         const mediaSources = [
             "./videos/42920891a.mp4",
             "./videos/1.mp4",
@@ -337,6 +350,7 @@
 
         const deletedItems = [];
 
+        // Build DOM structure
         mediaSources.forEach((src, index) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'media-wrapper';
@@ -374,21 +388,71 @@
             initInteract(wrapper);
         });
 
-        /* Universal Panic Hide Function */
-        function immediateHide() {
+        /* Absolute positioning conversion across all cards to avoid layout reflow jumps */
+        function convertLayoutToAbsolute() {
+            if (isLayoutInitialized) return;
+
+            const wrappers = container.querySelectorAll('.media-wrapper');
+            const containerRect = container.getBoundingClientRect();
+            const rects = [];
+
+            wrappers.forEach(w => {
+                const r = w.getBoundingClientRect();
+                rects.push({
+                    el: w,
+                    width: r.width,
+                    height: r.height,
+                    left: r.left - containerRect.left,
+                    top: r.top - containerRect.top
+                });
+            });
+
+            rects.forEach(item => {
+                item.el.style.width = item.width + 'px';
+                item.el.style.height = item.height + 'px';
+                item.el.style.left = item.left + 'px';
+                item.el.style.top = item.top + 'px';
+                item.el.style.position = 'absolute';
+                item.el.classList.add('initialized');
+            });
+
+            container.style.display = 'block';
+            isLayoutInitialized = true;
+        }
+
+        function bringToFront(element) {
+            maxZIndex++;
+            element.style.zIndex = maxZIndex;
+        }
+
+        /* Hide Everything */
+        function hideEverything() {
+            isAppVisible = false;
+            document.body.classList.add('is-hidden');
             container.classList.remove('show');
             iframeModal.classList.remove('show');
             activeIframe.src = '';
             muteAllVideos();
         }
 
-        /* Corner Click Listener - Hides everything if open, or opens media container if closed */
+        /* Show Everything */
+        function showEverything() {
+            isAppVisible = true;
+            document.body.classList.remove('is-hidden');
+            container.classList.add('show');
+
+            requestAnimationFrame(() => {
+                convertLayoutToAbsolute();
+            });
+        }
+
+        /* Master Toggle Button */
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (container.classList.contains('show') || iframeModal.classList.contains('show')) {
-                immediateHide();
+            if (isAppVisible) {
+                hideEverything();
             } else {
-                container.classList.add('show');
+                showEverything();
             }
         });
 
@@ -410,12 +474,21 @@
             restoreMenu.classList.remove('show');
         });
 
-        /* Instant Hide on Tab Switch / Window Unfocus / Focus Shift */
-        window.addEventListener('blur', immediateHide, true);
-        window.addEventListener('pagehide', immediateHide, true);
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) immediateHide();
+        /* Handle blur without hiding when interacting with iframe */
+        window.addEventListener('blur', () => {
+            if (document.activeElement === activeIframe) return;
+            hideEverything();
         }, true);
+
+        window.addEventListener('pagehide', hideEverything, true);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) hideEverything();
+        }, true);
+
+        /* Escape key shortcut */
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') hideEverything();
+        });
 
         /* Iframe Management */
         function openIframe(url) {
@@ -423,22 +496,19 @@
             container.classList.remove('show');
             activeIframe.src = url;
             iframeModal.classList.add('show');
+            isAppVisible = true;
+            document.body.classList.remove('is-hidden');
         }
 
         gifreelsBtn.addEventListener('click', () => openIframe('https://gifreels.com'));
         hardgifBtn.addEventListener('click', () => openIframe('https://hardgif.com'));
 
-        /* Click anywhere on Iframe Modal hides everything */
-        iframeModal.addEventListener('click', () => {
-            immediateHide();
-        });
-
         function muteAllVideos() {
             document.querySelectorAll('.media-wrapper video').forEach(video => {
                 video.muted = true;
             });
-            document.querySelectorAll('.sound-btn').forEach(btn => {
-                btn.textContent = '🔇 Mute';
+            document.querySelectorAll('.sound-btn').forEach(b => {
+                b.textContent = '🔇 Mute';
             });
         }
 
@@ -485,31 +555,7 @@
             }
         }
 
-        function makeAbsolute(element) {
-            if (element.style.position === 'absolute') return;
-
-            const rect = element.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-
-            element.style.width = rect.width + 'px';
-            element.style.height = rect.height + 'px';
-            element.style.left = (rect.left - containerRect.left) + 'px';
-            element.style.top = (rect.top - containerRect.top) + 'px';
-            element.style.position = 'absolute';
-            element.classList.add('initialized');
-        }
-
         function initInteract(element) {
-            /* Clicking anywhere on a video/media item immediately hides everything */
-            element.addEventListener('click', (e) => {
-                if (e.target.classList.contains('resize-handle') || 
-                    e.target.classList.contains('pip-btn') || 
-                    e.target.classList.contains('sound-btn') || 
-                    e.target.classList.contains('delete-btn')) return;
-                
-                immediateHide();
-            });
-
             const pipBtn = element.querySelector('.pip-btn');
             if (pipBtn) {
                 pipBtn.addEventListener('click', async (e) => {
@@ -545,16 +591,14 @@
                 });
             }
 
+            /* Smooth Dragging */
             element.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('resize-handle') || 
                     e.target.classList.contains('pip-btn') || 
                     e.target.classList.contains('sound-btn') || 
                     e.target.classList.contains('delete-btn')) return;
-                
-                makeAbsolute(element);
 
-                document.querySelectorAll('.media-wrapper').forEach(w => w.style.zIndex = '1');
-                element.style.zIndex = '100';
+                bringToFront(element);
 
                 const startX = e.clientX;
                 const startY = e.clientY;
@@ -575,16 +619,14 @@
                 document.addEventListener('mouseup', stopDrag);
             });
 
+            /* Smooth Aspect-Preserving Resizing */
             const handles = element.querySelectorAll('.resize-handle');
             handles.forEach(handle => {
                 handle.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
 
-                    makeAbsolute(element);
-
-                    document.querySelectorAll('.media-wrapper').forEach(w => w.style.zIndex = '1');
-                    element.style.zIndex = '100';
+                    bringToFront(element);
 
                     const startX = e.clientX;
                     const startY = e.clientY;
@@ -603,26 +645,26 @@
                         let newHeight = startHeight;
 
                         if (dir === 'se' || dir === 'e') {
-                            newWidth = Math.max(50, startWidth + deltaX);
+                            newWidth = Math.max(80, startWidth + deltaX);
                             newHeight = newWidth / aspectRatio;
                         } else if (dir === 'sw' || dir === 'w') {
-                            newWidth = Math.max(50, startWidth - deltaX);
+                            newWidth = Math.max(80, startWidth - deltaX);
                             newHeight = newWidth / aspectRatio;
                             element.style.left = (startLeft + startWidth - newWidth) + 'px';
                         } else if (dir === 'ne') {
-                            newWidth = Math.max(50, startWidth + deltaX);
+                            newWidth = Math.max(80, startWidth + deltaX);
                             newHeight = newWidth / aspectRatio;
                             element.style.top = (startTop + startHeight - newHeight) + 'px';
                         } else if (dir === 'nw') {
-                            newWidth = Math.max(50, startWidth - deltaX);
+                            newWidth = Math.max(80, startWidth - deltaX);
                             newHeight = newWidth / aspectRatio;
                             element.style.left = (startLeft + startWidth - newWidth) + 'px';
                             element.style.top = (startTop + startHeight - newHeight) + 'px';
                         } else if (dir === 's') {
-                            newHeight = Math.max(50 / aspectRatio, startHeight + deltaY);
+                            newHeight = Math.max(80 / aspectRatio, startHeight + deltaY);
                             newWidth = newHeight * aspectRatio;
                         } else if (dir === 'n') {
-                            newHeight = Math.max(50 / aspectRatio, startHeight - deltaY);
+                            newHeight = Math.max(80 / aspectRatio, startHeight - deltaY);
                             newWidth = newHeight * aspectRatio;
                             element.style.top = (startTop + startHeight - newHeight) + 'px';
                         }
