@@ -388,7 +388,7 @@
             initInteract(wrapper);
         });
 
-        /* Absolute positioning conversion across all cards to avoid layout reflow jumps */
+        /* Absolute positioning conversion across all cards */
         function convertLayoutToAbsolute() {
             if (isLayoutInitialized) return;
 
@@ -446,7 +446,7 @@
             });
         }
 
-        /* Master Toggle Button */
+        /* Master Top-Left Toggle Button */
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (isAppVisible) {
@@ -474,16 +474,17 @@
             restoreMenu.classList.remove('show');
         });
 
-        /* Handle blur without hiding when interacting with iframe */
-        window.addEventListener('blur', () => {
-            if (document.activeElement === activeIframe) return;
+        /* FIXED: Only hide when the window/tab itself loses focus */
+        window.addEventListener('blur', (e) => {
+            if (e.target !== window) return; // Ignore element focus changes
+            if (document.activeElement === activeIframe) return; // Ignore focus moving into iframe
             hideEverything();
-        }, true);
+        });
 
-        window.addEventListener('pagehide', hideEverything, true);
+        window.addEventListener('pagehide', hideEverything);
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) hideEverything();
-        }, true);
+        });
 
         /* Escape key shortcut */
         document.addEventListener('keydown', (e) => {
