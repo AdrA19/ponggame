@@ -144,21 +144,25 @@
             right: 8px;
             z-index: 102;
             display: flex;
-            gap: 4px;
-            opacity: 0;
+            gap: 6px;
+            opacity: 0.85;
             transition: opacity 0.2s;
         }
 
         .pip-btn, .sound-btn {
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.8);
             color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 11px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
             transition: background 0.2s;
+            user-select: none;
         }
 
         .delete-btn {
@@ -166,21 +170,22 @@
             top: 8px;
             left: 8px;
             z-index: 102;
-            background: rgba(220, 38, 38, 0.85);
+            background: rgba(220, 38, 38, 0.9);
             color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 4px;
-            width: 24px;
-            height: 24px;
-            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            font-size: 20px;
             font-weight: bold;
             line-height: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            opacity: 0;
+            opacity: 0.85;
             transition: opacity 0.2s, background 0.2s;
+            user-select: none;
         }
 
         .media-wrapper:hover .controls-top-right,
@@ -189,11 +194,13 @@
         }
 
         .pip-btn:hover, .sound-btn:hover {
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
+            border-color: #fff;
         }
 
         .delete-btn:hover {
             background: rgba(185, 28, 28, 1);
+            border-color: #fff;
         }
 
         .resize-handle {
@@ -280,7 +287,7 @@
                 htmlContent += `
                     <video autoplay loop muted playsinline><source src="${src}" type="video/mp4"></video>
                     <div class="controls-top-right">
-                        <button class="sound-btn" title="Toggle Sound">🔇</button>
+                        <button class="sound-btn" title="Toggle Sound">🔇 Mute</button>
                         <button class="pip-btn" title="Picture in Picture">PiP</button>
                     </div>
                 `;
@@ -338,7 +345,7 @@
                 video.muted = true;
             });
             document.querySelectorAll('.sound-btn').forEach(btn => {
-                btn.textContent = '🔇';
+                btn.textContent = '🔇 Mute';
             });
         }
 
@@ -350,7 +357,7 @@
             if (video) {
                 video.muted = true;
                 const soundBtn = wrapper.querySelector('.sound-btn');
-                if (soundBtn) soundBtn.textContent = '🔇';
+                if (soundBtn) soundBtn.textContent = '🔇 Mute';
             }
 
             wrapper.style.display = 'none';
@@ -423,7 +430,7 @@
                     const video = element.querySelector('video');
                     if (!video) return;
                     video.muted = !video.muted;
-                    soundBtn.textContent = video.muted ? '🔇' : '🔊';
+                    soundBtn.textContent = video.muted ? '🔇 Mute' : '🔊 Sound';
                 });
             }
 
