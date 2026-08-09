@@ -10,8 +10,10 @@
             background-color: #121212;
             color: #fff;
             font-family: Arial, sans-serif;
+            overflow-x: hidden;
         }
 
+        /* Top Bar - Hidden by default, shows only on hover */
         .top-bar {
             position: fixed;
             top: 10px;
@@ -19,6 +21,12 @@
             z-index: 10000;
             display: flex;
             gap: 10px;
+            opacity: 0;
+            transition: opacity 0.15s linear;
+        }
+
+        .top-bar:hover {
+            opacity: 1;
         }
 
         .top-bar-btn {
@@ -102,6 +110,7 @@
             position: relative;
         }
 
+        /* Show/Hide Toggle Area */
         #toggleBtn {
             opacity: 0;
             position: fixed;
@@ -138,6 +147,7 @@
             object-fit: cover;
         }
 
+        /* Video Controls - Hidden by default, show ONLY on video wrapper hover */
         .controls-top-right {
             position: absolute;
             top: 8px;
@@ -145,12 +155,55 @@
             z-index: 102;
             display: flex;
             gap: 6px;
-            opacity: 0.85;
-            transition: opacity 0.2s;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 102;
+            background: rgba(220, 38, 38, 0.9);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            width: 36px;
+            height: 36px;
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out, background 0.2s;
+            user-select: none;
+        }
+
+        .resize-handle {
+            position: absolute;
+            background: #777;
+            border: 1px solid #111;
+            z-index: 101;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out, background 0.2s;
+        }
+
+        /* Show all controls when hovering over individual media item */
+        .media-wrapper:hover .controls-top-right,
+        .media-wrapper:hover .delete-btn,
+        .media-wrapper:hover .resize-handle {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .pip-btn, .sound-btn {
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             color: #ffffff;
             border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 6px;
@@ -165,34 +218,6 @@
             user-select: none;
         }
 
-        .delete-btn {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            z-index: 102;
-            background: rgba(220, 38, 38, 0.9);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 6px;
-            width: 32px;
-            height: 32px;
-            font-size: 20px;
-            font-weight: bold;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0.85;
-            transition: opacity 0.2s, background 0.2s;
-            user-select: none;
-        }
-
-        .media-wrapper:hover .controls-top-right,
-        .media-wrapper:hover .delete-btn {
-            opacity: 1;
-        }
-
         .pip-btn:hover, .sound-btn:hover {
             background: rgba(0, 0, 0, 0.95);
             border-color: #fff;
@@ -201,19 +226,6 @@
         .delete-btn:hover {
             background: rgba(185, 28, 28, 1);
             border-color: #fff;
-        }
-
-        .resize-handle {
-            position: absolute;
-            background: #777;
-            border: 1px solid #111;
-            z-index: 101;
-            opacity: 0;
-            transition: opacity 0.2s, background 0.2s;
-        }
-
-        .media-wrapper:hover .resize-handle {
-            opacity: 1;
         }
 
         .resize-handle:hover {
@@ -229,11 +241,99 @@
         .resize-handle.s { bottom: 0; left: 50%; transform: translateX(-50%); width: 20px; height: 6px; cursor: ns-resize; }
         .resize-handle.e { right: 0; top: 50%; transform: translateY(-50%); height: 20px; width: 6px; cursor: ew-resize; }
         .resize-handle.w { left: 0; top: 50%; transform: translateY(-50%); height: 20px; width: 6px; cursor: ew-resize; }
+
+        /* Fullscreen Iframe Modal (Fixed aspect ratio, locked fullscreen, no resize) */
+        .iframe-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 20000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .iframe-modal.show {
+            display: flex;
+        }
+
+        .iframe-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            aspect-ratio: 16 / 9;
+            object-fit: contain;
+        }
+
+        /* Disappear Corner Button */
+        .iframe-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 44px;
+            height: 44px;
+            background: rgba(220, 38, 38, 0.9);
+            color: #fff;
+            border: 2px solid #fff;
+            border-radius: 8px;
+            font-size: 28px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20005;
+            user-select: none;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .iframe-close-btn:hover {
+            background: rgba(185, 28, 28, 1);
+            transform: scale(1.05);
+        }
+
+        /* Iframe Sound Control */
+        .iframe-mute-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 20005;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .iframe-mute-btn:hover {
+            background: rgba(30, 30, 30, 1);
+            border-color: #fff;
+        }
     </style>
 </head>
 <body>
 
+    <!-- Top Bar Controls (Appears on Hover) -->
     <div class="top-bar">
+        <button id="gifreelsBtn" class="top-bar-btn">GifReels</button>
+        <button id="hardgifBtn" class="top-bar-btn">HardGif</button>
         <button id="muteAllBtn" class="top-bar-btn">Mute All</button>
         <div class="dropdown">
             <button id="restoreDropdownBtn" class="top-bar-btn">Restore (0)</button>
@@ -244,8 +344,18 @@
         </div>
     </div>
 
+    <!-- Toggle Area -->
     <button id="toggleBtn"></button>
     <div id="mediaContainer" class="media-content"></div>
+
+    <!-- Fullscreen Iframe Modal (Replaces Videos) -->
+    <div id="iframeModal" class="iframe-modal">
+        <div class="iframe-container">
+            <button id="iframeMuteBtn" class="iframe-mute-btn">🔇 Mute</button>
+            <button id="iframeCloseBtn" class="iframe-close-btn" title="Close">&times;</button>
+            <iframe id="activeIframe" src="" allow="autoplay"></iframe>
+        </div>
+    </div>
 
     <script>
         const btn = document.getElementById('toggleBtn');
@@ -255,6 +365,16 @@
         const restoreMenu = document.getElementById('restoreMenu');
         const restoreAllOption = document.getElementById('restoreAllOption');
         const deletedList = document.getElementById('deletedList');
+
+        const gifreelsBtn = document.getElementById('gifreelsBtn');
+        const hardgifBtn = document.getElementById('hardgifBtn');
+        const iframeModal = document.getElementById('iframeModal');
+        const activeIframe = document.getElementById('activeIframe');
+        const iframeCloseBtn = document.getElementById('iframeCloseBtn');
+        const iframeMuteBtn = document.getElementById('iframeMuteBtn');
+
+        let isIframeMuted = true;
+        let activeIframeUrl = '';
 
         const mediaSources = [
             "./videos/42920891a.mp4",
@@ -333,11 +453,56 @@
             restoreMenu.classList.remove('show');
         });
 
+        /* Instant Hide on Tab Switch or Window Unfocus */
+        function immediateHide() {
+            container.classList.remove('show');
+            closeIframe();
+            muteAllVideos();
+        }
+
+        // Fires instantly when mouse clicks away or keyboard shortcuts change tab
+        window.addEventListener('blur', immediateHide, true);
+        window.addEventListener('pagehide', immediateHide, true);
+
+        // Backup check on standard tab visibility transition
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                container.classList.remove('show');
-                muteAllVideos();
+                immediateHide();
             }
+        }, true);
+
+        /* Iframe Management */
+        function openIframe(url) {
+            muteAllVideos();
+            container.classList.remove('show');
+            activeIframeUrl = url;
+            isIframeMuted = true;
+            iframeMuteBtn.textContent = '🔇 Mute';
+            activeIframe.src = url;
+            activeIframe.allow = "autoplay 'none'";
+            iframeModal.classList.add('show');
+        }
+
+        function closeIframe() {
+            iframeModal.classList.remove('show');
+            activeIframe.src = '';
+        }
+
+        gifreelsBtn.addEventListener('click', () => openIframe('https://gifreels.com'));
+        hardgifBtn.addEventListener('click', () => openIframe('https://hardgif.com'));
+        iframeCloseBtn.addEventListener('click', closeIframe);
+
+        /* Easy Mute Control for Iframe */
+        iframeMuteBtn.addEventListener('click', () => {
+            isIframeMuted = !isIframeMuted;
+            iframeMuteBtn.textContent = isIframeMuted ? '🔇 Mute' : '🔊 Sound';
+            
+            if (isIframeMuted) {
+                activeIframe.allow = "autoplay 'none'";
+            } else {
+                activeIframe.allow = "autoplay *";
+            }
+            activeIframe.src = activeIframeUrl;
         });
 
         function muteAllVideos() {
