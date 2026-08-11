@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ponggame</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: monospace, Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Top Bar - Hidden by default, shows on hover when active */
+        .top-bar {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 10000;
+            display: flex;
+            gap: 10px;
+            opacity: 0;
+            transition: opacity 0.15s linear;
+        }
+
+        .top-bar:hover {
+            opacity: 1;
+        }
+
+        /* Disable Top Bar completely in Pong mode */
+        body.is-pong .top-bar {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .top-bar-btn {
+            background: #111;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            font-family: monospace;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .top-bar-btn:hover {
+            background: #222;
+            border-color: #fff;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 110%;
+            background-color: #000;
+            min-width: 180px;
+            box-shadow: 0px 8px 16px 0px rgba(255,255,255,0.1);
+            border: 1px solid #444;
+            border-radius: 4px;
+            z-index: 10001;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            color: #fff;
+            padding: 8px 12px;
+            text-decoration: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            border-bottom: 1px solid #222;
+            cursor: pointer;
+            font-family: monospace;
+        }
+
+        .dropdown-item:hover {
+            background-color: #222;
+        }
+
+        .dropdown-item.restore-all {
+            background-color: #111;
+            font-weight: bold;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .dropdown-item.restore-all:hover {
+            background-color: #333;
+        }
+
+        .media-content {
+            display: none;
+            min-height: 100vh;
+            width: 100vw;
+            position: relative;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #121212;
+        }
+
+        .media-content.show {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        /* Top-Left Corner Master Trigger (Strictly 20px x 20px Invisible) */
+        #toggleBtn {
+            opacity: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px !important;
+            max-width: 20px !important;
+            min-height: 20px !important;
+            max-height: 20px !important;
+            padding: 0;
+            margin: 0;
+            border: none;
+            outline: none;
+            background: transparent;
+            cursor: default;
+            z-index: 30000;
+        }
+
+        .media-wrapper {
+            position: relative;
+            border: 2px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: move;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            display: inline-block;
+            background: #000;
+            user-select: none;
+        }
+
+        .media-wrapper video, 
+        .media-wrapper img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            pointer-events: none; 
+        }
+
+        .media-wrapper.initialized video,
+        .media-wrapper.initialized img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Controls Overlay */
+        .controls-top-right {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 102;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 102;
+            background: rgba(220, 38, 38, 0.9);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out, background 0.2s;
+        }
+
+        .resize-handle {
+            position: absolute;
+            background: #777;
+            border: 1px solid #111;
+            z-index: 101;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out, background 0.2s;
+        }
+
+        .media-wrapper:hover .controls-top-right,
+        .media-wrapper:hover .delete-btn,
+        .media-wrapper:hover .resize-handle {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pip-btn, .sound-btn {
+            background: rgba(0, 0, 0, 0.85);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s;
+        }
+
+        .pip-btn:hover, .sound-btn:hover {
+            background: rgba(0, 0, 0, 0.95);
+            border-color: #fff;
+        }
+
+        .delete-btn:hover {
+            background: rgba(185, 28, 28, 1);
+            border-color: #fff;
+        }
+
+        .resize-handle:hover { background: #fff; }
+
+        .resize-handle.nw { top: 0; left: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+        .resize-handle.ne { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+        .resize-handle.sw { bottom: 0; left: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+        .resize-handle.se { bottom: 0; right: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+
+        .resize-handle.n { top: 0; left: 50%; transform: translateX(-50%); width: 20px; height: 6px; cursor: ns-resize; }
+        .resize-handle.s { bottom: 0; left: 50%; transform: translateX(-50%); width: 20px; height: 6px; cursor: ns-resize; }
+        .resize-handle.e { right: 0; top: 50%; transform: translateY(-50%); height: 20px; width: 6px; cursor: ew-resize; }
+        .resize-handle.w { left: 0; top: 50%; transform: translateY(-50%); height: 20px; width: 6px; cursor: ew-resize; }
+
+        /* Fullscreen Clean Iframe Modal */
+        .iframe-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 20000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .iframe-modal.show {
+            display: flex;
+        }
+
+        .iframe-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Classic Retro Black & White Pong Overlay */
+        .pong-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            z-index: 25000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .pong-modal.show {
+            display: flex;
+        }
+
+        .pong-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: #000000;
+            padding: 20px;
+        }
+
+        .pong-canvas {
+            background: #000000;
+            border: 4px solid #ffffff;
+            cursor: default; /* Mouse cursor explicitly visible */
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+        }
+
+        .pong-hint {
+            font-size: 13px;
+            color: #888;
+            font-family: monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body class="is-pong">
+
+    <!-- Top Bar Controls -->
+    <div class="top-bar">
+        <button id="gifreelsBtn" class="top-bar-btn">GifReels</button>
+        <button id="hardgifBtn" class="top-bar-btn">HardGif</button>
+        <button id="muteAllBtn" class="top-bar-btn">Mute All</button>
+        <div class="dropdown">
+            <button id="restoreDropdownBtn" class="top-bar-btn">Restore (0)</button>
+            <div id="restoreMenu" class="dropdown-menu">
+                <div id="restoreAllOption" class="dropdown-item restore-all">Restore All</div>
+                <div id="deletedList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Master Invisible 20px x 20px Top-Left Corner Toggle Button -->
+    <button id="toggleBtn" aria-label="Toggle Dashboard"></button>
+    <div id="mediaContainer" class="media-content"></div>
+
+    <!-- Clean Fullscreen Iframe Modal -->
+    <div id="iframeModal" class="iframe-modal">
+        <div class="iframe-container">
+            <iframe id="activeIframe" src="" allow="autoplay"></iframe>
+        </div>
+    </div>
+
+    <!-- Permanent Classic Black & White Pong Display -->
+    <div id="pongModal" class="pong-modal show">
+        <div class="pong-container">
+            <canvas id="pongCanvas" class="pong-canvas" width="800" height="500"></canvas>
+            <span class="pong-hint">PONG — MOVE MOUSE UP/DOWN TO CONTROL PADDLE</span>
+        </div>
+    </div>
+
+    <script>
+        const btn = document.getElementById('toggleBtn');
+        const container = document.getElementById('mediaContainer');
+        const muteAllBtn = document.getElementById('muteAllBtn');
+        const restoreDropdownBtn = document.getElementById('restoreDropdownBtn');
+        const restoreMenu = document.getElementById('restoreMenu');
+        const restoreAllOption = document.getElementById('restoreAllOption');
+        const deletedList = document.getElementById('deletedList');
+
+        const gifreelsBtn = document.getElementById('gifreelsBtn');
+        const hardgifBtn = document.getElementById('hardgifBtn');
+        const iframeModal = document.getElementById('iframeModal');
+        const activeIframe = document.getElementById('activeIframe');
+
+        const pongModal = document.getElementById('pongModal');
+        const pongCanvas = document.getElementById('pongCanvas');
+        const ctx = pongCanvas.getContext('2d');
+
+        // Application State: Strictly 1 = Pong (Default backdrop), 2 = Media Dashboard
+        let currentState = 1;
+        let isLayoutInitialized = false;
+        let maxZIndex = 100;
+
+        /* --- Classic Black & White Pong Engine --- */
+        let pongAnimationId = null;
+        const paddleWidth = 12;
+        const paddleHeight = 80;
+        let playerY = (pongCanvas.height - paddleHeight) / 2;
+        let aiY = (pongCanvas.height - paddleHeight) / 2;
+        let playerScore = 0;
+        let aiScore = 0;
+
+        let ballX = pongCanvas.width / 2;
+        let ballY = pongCanvas.height / 2;
+        let ballSpeedX = 6;
+        let ballSpeedY = 3;
+        const ballSize = 10;
+
+        // Mouse Controls: Cursor visible, paddle follows vertical mouse coordinates
+        window.addEventListener('mousemove', (e) => {
+            const rect = pongCanvas.getBoundingClientRect();
+            const mouseY = e.clientY - rect.top;
+            playerY = mouseY - paddleHeight / 2;
+            if (playerY < 0) playerY = 0;
+            if (playerY > pongCanvas.height - paddleHeight) playerY = pongCanvas.height - paddleHeight;
+        });
+
+        function resetBall() {
+            ballX = pongCanvas.width / 2;
+            ballY = pongCanvas.height / 2;
+            ballSpeedX = (ballSpeedX > 0 ? -1 : 1) * 6;
+            ballSpeedY = (Math.random() - 0.5) * 6;
+        }
+
+        function updatePong() {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            if (ballY < 0) {
+                ballY = 0;
+                ballSpeedY = -ballSpeedY;
+            } else if (ballY + ballSize > pongCanvas.height) {
+                ballY = pongCanvas.height - ballSize;
+                ballSpeedY = -ballSpeedY;
+            }
+
+            const aiCenter = aiY + paddleHeight / 2;
+            if (aiCenter < ballY - 10) {
+                aiY += 4.8;
+            } else if (aiCenter > ballY + 10) {
+                aiY -= 4.8;
+            }
+            if (aiY < 0) aiY = 0;
+            if (aiY > pongCanvas.height - paddleHeight) aiY = pongCanvas.height - paddleHeight;
+
+            if (ballX <= 30 && ballX >= 18) {
+                if (ballY + ballSize >= playerY && ballY <= playerY + paddleHeight) {
+                    ballSpeedX = -ballSpeedX * 1.05;
+                    const deltaY = (ballY + ballSize / 2) - (playerY + paddleHeight / 2);
+                    ballSpeedY = deltaY * 0.22;
+                    ballX = 30;
+                }
+            }
+
+            if (ballX + ballSize >= pongCanvas.width - 30 && ballX + ballSize <= pongCanvas.width - 18) {
+                if (ballY + ballSize >= aiY && ballY <= aiY + paddleHeight) {
+                    ballSpeedX = -ballSpeedX * 1.05;
+                    const deltaY = (ballY + ballSize / 2) - (aiY + paddleHeight / 2);
+                    ballSpeedY = deltaY * 0.22;
+                    ballX = pongCanvas.width - 30 - ballSize;
+                }
+            }
+
+            if (ballX < 0) {
+                aiScore++;
+                resetBall();
+            } else if (ballX > pongCanvas.width) {
+                playerScore++;
+                resetBall();
+            }
+        }
+
+        function drawPong() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, pongCanvas.width, pongCanvas.height);
+
+            ctx.fillStyle = '#ffffff';
+            for (let i = 10; i < pongCanvas.height; i += 25) {
+                ctx.fillRect(pongCanvas.width / 2 - 2, i, 4, 12);
+            }
+
+            ctx.fillRect(18, playerY, paddleWidth, paddleHeight);
+            ctx.fillRect(pongCanvas.width - 18 - paddleWidth, aiY, paddleWidth, paddleHeight);
+            ctx.fillRect(ballX, ballY, ballSize, ballSize);
+
+            ctx.font = 'bold 48px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(playerScore, pongCanvas.width / 4, 60);
+            ctx.fillText(aiScore, (3 * pongCanvas.width) / 4, 60);
+        }
+
+        function pongLoop() {
+            updatePong();
+            drawPong();
+            pongAnimationId = requestAnimationFrame(pongLoop);
+        }
+
+        function startPong() {
+            if (!pongAnimationId) {
+                resetBall();
+                pongLoop();
+            }
+        }
+
+        function stopPong() {
+            if (pongAnimationId) {
+                cancelAnimationFrame(pongAnimationId);
+                pongAnimationId = null;
+            }
+        }
+
+        /* --- Media Dashboard Setup --- */
+        const mediaSources = [
+            "./videos/42920891a.mp4",
+            "./videos/1.mp4",
+            "./videos/2.mp4",
+            "./videos/3.mp4",
+            "./videos/4.mp4",
+            "./videos/5.mp4",
+            "./videos/26037237.gif",
+            "./videos/11.mp4",
+            "./videos/21.mp4",
+            "./videos/34.mp4",
+            "./videos/54.mp4",
+            "./videos/324.mp4",
+            "./videos/65.mp4"
+        ];
+
+        const deletedItems = [];
+
+        mediaSources.forEach((src, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'media-wrapper';
+            wrapper.dataset.id = 'media-' + index;
+            wrapper.dataset.filename = src.split('/').pop();
+            
+            const isVideo = src.endsWith('.mp4');
+            let htmlContent = `<button class="delete-btn" title="Delete">&times;</button>`;
+            
+            if (isVideo) {
+                htmlContent += `
+                    <video autoplay loop muted playsinline><source src="${src}" type="video/mp4"></video>
+                    <div class="controls-top-right">
+                        <button class="sound-btn" title="Toggle Sound">🔇 Mute</button>
+                        <button class="pip-btn" title="Picture in Picture">PiP</button>
+                    </div>
+                `;
+            } else {
+                htmlContent += `<img src="${src}" alt="Media Content">`;
+            }
+            
+            htmlContent += `
+                <div class="resize-handle nw" data-dir="nw"></div>
+                <div class="resize-handle ne" data-dir="ne"></div>
+                <div class="resize-handle sw" data-dir="sw"></div>
+                <div class="resize-handle se" data-dir="se"></div>
+                <div class="resize-handle n" data-dir="n"></div>
+                <div class="resize-handle s" data-dir="s"></div>
+                <div class="resize-handle e" data-dir="e"></div>
+                <div class="resize-handle w" data-dir="w"></div>
+            `;
+            
+            wrapper.innerHTML = htmlContent;
+            container.appendChild(wrapper);
+            initInteract(wrapper);
+        });
+
+        function convertLayoutToAbsolute() {
+            if (isLayoutInitialized) return;
+
+            const wrappers = container.querySelectorAll('.media-wrapper');
+            const containerRect = container.getBoundingClientRect();
+            const rects = [];
+
+            wrappers.forEach(w => {
+                const r = w.getBoundingClientRect();
+                rects.push({
+                    el: w,
+                    width: r.width,
+                    height: r.height,
+                    left: r.left - containerRect.left,
+                    top: r.top - containerRect.top
+                });
+            });
+
+            rects.forEach(item => {
+                item.el.style.width = item.width + 'px';
+                item.el.style.height = item.height + 'px';
+                item.el.style.left = item.left + 'px';
+                item.el.style.top = item.top + 'px';
+                item.el.style.position = 'absolute';
+                item.el.classList.add('initialized');
+            });
+
+            container.style.display = 'block';
+            isLayoutInitialized = true;
+        }
+
+        function bringToFront(element) {
+            maxZIndex++;
+            element.style.zIndex = maxZIndex;
+        }
+
+        /* Strict State Managers: Pong is Default, Media is Shown ONLY on Toggle */
+        function showPong() {
+            currentState = 1;
+            document.body.classList.add('is-pong');
+            container.classList.remove('show');
+            iframeModal.classList.remove('show');
+            pongModal.classList.add('show');
+            activeIframe.src = '';
+            muteAllVideos();
+            startPong();
+        }
+
+        function showDashboard() {
+            currentState = 2;
+            document.body.classList.remove('is-pong');
+            pongModal.classList.remove('show');
+            stopPong();
+            container.classList.add('show');
+
+            requestAnimationFrame(() => {
+                convertLayoutToAbsolute();
+            });
+        }
+
+        /* Toggle Button switches strictly between Pong and Media */
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentState === 2) {
+                showPong();
+            } else {
+                showDashboard();
+            }
+        });
+
+        muteAllBtn.addEventListener('click', muteAllVideos);
+
+        restoreDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            restoreMenu.classList.toggle('show');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!restoreMenu.contains(e.target) && e.target !== restoreDropdownBtn) {
+                restoreMenu.classList.remove('show');
+            }
+        });
+
+        restoreAllOption.addEventListener('click', () => {
+            [...deletedItems].forEach(item => restoreItem(item.id));
+            restoreMenu.classList.remove('show');
+        });
+
+        /* Window Blur / Hide / Escape actions IMMEDIATELY revert to Pong (Never Blank) */
+        window.addEventListener('blur', (e) => {
+            if (e.target !== window) return; 
+            if (document.activeElement === activeIframe) return; 
+            showPong();
+        });
+
+        window.addEventListener('pagehide', showPong);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) showPong();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') showPong();
+        });
+
+        /* Iframe Management */
+        function openIframe(url) {
+            muteAllVideos();
+            container.classList.remove('show');
+            pongModal.classList.remove('show');
+            stopPong();
+            activeIframe.src = url;
+            iframeModal.classList.add('show');
+            currentState = 2;
+            document.body.classList.remove('is-pong');
+        }
+
+        gifreelsBtn.addEventListener('click', () => openIframe('https://gifreels.com'));
+        hardgifBtn.addEventListener('click', () => openIframe('https://hardgif.com'));
+
+        function muteAllVideos() {
+            document.querySelectorAll('.media-wrapper video').forEach(video => {
+                video.muted = true;
+            });
+            document.querySelectorAll('.sound-btn').forEach(b => {
+                b.textContent = '🔇 Mute';
+            });
+        }
+
+        function deleteItem(wrapper) {
+            const id = wrapper.dataset.id;
+            const filename = wrapper.dataset.filename;
+
+            const video = wrapper.querySelector('video');
+            if (video) {
+                video.muted = true;
+                const soundBtn = wrapper.querySelector('.sound-btn');
+                if (soundBtn) soundBtn.textContent = '🔇 Mute';
+            }
+
+            wrapper.style.display = 'none';
+            deletedItems.push({ id, filename, element: wrapper });
+            updateRestoreMenu();
+        }
+
+        function restoreItem(id) {
+            const index = deletedItems.findIndex(item => item.id === id);
+            if (index !== -1) {
+                const item = deletedItems.splice(index, 1)[0];
+                item.element.style.display = '';
+                updateRestoreMenu();
+            }
+        }
+
+        function updateRestoreMenu() {
+            restoreDropdownBtn.textContent = `Restore (${deletedItems.length})`;
+            deletedList.innerHTML = '';
+
+            if (deletedItems.length === 0) {
+                restoreAllOption.style.display = 'none';
+            } else {
+                restoreAllOption.style.display = 'flex';
+                deletedItems.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'dropdown-item';
+                    row.innerHTML = `<span>${item.filename}</span> <span>➕</span>`;
+                    row.addEventListener('click', () => restoreItem(item.id));
+                    deletedList.appendChild(row);
+                });
+            }
+        }
+
+        function initInteract(element) {
+            const pipBtn = element.querySelector('.pip-btn');
+            if (pipBtn) {
+                pipBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const video = element.querySelector('video');
+                    if (!video) return;
+                    try {
+                        if (document.pictureInPictureElement) {
+                            await document.exitPictureInPicture();
+                        } else {
+                            await video.requestPictureInPicture();
+                        }
+                    } catch (err) {}
+                });
+            }
+
+            const soundBtn = element.querySelector('.sound-btn');
+            if (soundBtn) {
+                soundBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const video = element.querySelector('video');
+                    if (!video) return;
+                    video.muted = !video.muted;
+                    soundBtn.textContent = video.muted ? '🔇 Mute' : '🔊 Sound';
+                });
+            }
+
+            const deleteBtn = element.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteItem(element);
+                });
+            }
+
+            element.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('resize-handle') || 
+                    e.target.classList.contains('pip-btn') || 
+                    e.target.classList.contains('sound-btn') || 
+                    e.target.classList.contains('delete-btn')) return;
+
+                bringToFront(element);
+
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startLeft = element.offsetLeft;
+                const startTop = element.offsetTop;
+
+                function doDrag(mEvent) {
+                    element.style.left = (startLeft + mEvent.clientX - startX) + 'px';
+                    element.style.top = (startTop + mEvent.clientY - startY) + 'px';
+                }
+
+                function stopDrag() {
+                    document.removeEventListener('mousemove', doDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
+
+                document.addEventListener('mousemove', doDrag);
+                document.addEventListener('mouseup', stopDrag);
+            });
+
+            const handles = element.querySelectorAll('.resize-handle');
+            handles.forEach(handle => {
+                handle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    bringToFront(element);
+
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const startWidth = element.offsetWidth;
+                    const startHeight = element.offsetHeight;
+                    const startLeft = element.offsetLeft;
+                    const startTop = element.offsetTop;
+
+                    const aspectRatio = startWidth / startHeight;
+                    const dir = handle.dataset.dir;
+
+                    function doResize(mEvent) {
+                        const deltaX = mEvent.clientX - startX;
+                        const deltaY = mEvent.clientY - startY;
+                        let newWidth = startWidth;
+                        let newHeight = startHeight;
+
+                        if (dir === 'se' || dir === 'e') {
+                            newWidth = Math.max(80, startWidth + deltaX);
+                            newHeight = newWidth / aspectRatio;
+                        } else if (dir === 'sw' || dir === 'w') {
+                            newWidth = Math.max(80, startWidth - deltaX);
+                            newHeight = newWidth / aspectRatio;
+                            element.style.left = (startLeft + startWidth - newWidth) + 'px';
+                        } else if (dir === 'ne') {
+                            newWidth = Math.max(80, startWidth + deltaX);
+                            newHeight = newWidth / aspectRatio;
+                            element.style.top = (startTop + startHeight - newHeight) + 'px';
+                        } else if (dir === 'nw') {
+                            newWidth = Math.max(80, startWidth - deltaX);
+                            newHeight = newWidth / aspectRatio;
+                            element.style.left = (startLeft + startWidth - newWidth) + 'px';
+                            element.style.top = (startTop + startHeight - newHeight) + 'px';
+                        } else if (dir === 's') {
+                            newHeight = Math.max(80 / aspectRatio, startHeight + deltaY);
+                            newWidth = newHeight * aspectRatio;
+                        } else if (dir === 'n') {
+                            newHeight = Math.max(80 / aspectRatio, startHeight - deltaY);
+                            newWidth = newHeight * aspectRatio;
+                            element.style.top = (startTop + startHeight - newHeight) + 'px';
+                        }
+
+                        element.style.width = newWidth + 'px';
+                        element.style.height = newHeight + 'px';
+                    }
+
+                    function stopResize() {
+                        document.removeEventListener('mousemove', doResize);
+                        document.removeEventListener('mouseup', stopResize);
+                    }
+
+                    document.addEventListener('mousemove', doResize);
+                    document.addEventListener('mouseup', stopResize);
+                });
+            });
+        }
+
+        // Initialize: Launch straight into Pong, update menu
+        showPong();
+        updateRestoreMenu();
+    </script>
+</body>
+</html>
