@@ -419,7 +419,7 @@
         let ballY = pongCanvas.height / 2;
         let ballSpeedX = 6;
         let ballSpeedY = 3;
-        const ballSize = 10; // Classic square/rect ball pixel style
+        const ballSize = 10;
 
         pongCanvas.addEventListener('mousemove', (e) => {
             const rect = pongCanvas.getBoundingClientRect();
@@ -440,7 +440,6 @@
             ballX += ballSpeedX;
             ballY += ballSpeedY;
 
-            // Top / Bottom wall bounce
             if (ballY < 0) {
                 ballY = 0;
                 ballSpeedY = -ballSpeedY;
@@ -449,7 +448,6 @@
                 ballSpeedY = -ballSpeedY;
             }
 
-            // AI paddle tracking logic
             const aiCenter = aiY + paddleHeight / 2;
             if (aiCenter < ballY - 10) {
                 aiY += 4.8;
@@ -459,7 +457,6 @@
             if (aiY < 0) aiY = 0;
             if (aiY > pongCanvas.height - paddleHeight) aiY = pongCanvas.height - paddleHeight;
 
-            // Player paddle collision
             if (ballX <= 30 && ballX >= 18) {
                 if (ballY + ballSize >= playerY && ballY <= playerY + paddleHeight) {
                     ballSpeedX = -ballSpeedX * 1.05;
@@ -469,7 +466,6 @@
                 }
             }
 
-            // AI paddle collision
             if (ballX + ballSize >= pongCanvas.width - 30 && ballX + ballSize <= pongCanvas.width - 18) {
                 if (ballY + ballSize >= aiY && ballY <= aiY + paddleHeight) {
                     ballSpeedX = -ballSpeedX * 1.05;
@@ -479,7 +475,6 @@
                 }
             }
 
-            // Scoring
             if (ballX < 0) {
                 aiScore++;
                 resetBall();
@@ -490,26 +485,18 @@
         }
 
         function drawPong() {
-            // Pure Black Field
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, pongCanvas.width, pongCanvas.height);
 
-            // Classic Dashed Net
             ctx.fillStyle = '#ffffff';
             for (let i = 10; i < pongCanvas.height; i += 25) {
                 ctx.fillRect(pongCanvas.width / 2 - 2, i, 4, 12);
             }
 
-            // Player Paddle (Solid White)
             ctx.fillRect(18, playerY, paddleWidth, paddleHeight);
-
-            // AI Paddle (Solid White)
             ctx.fillRect(pongCanvas.width - 18 - paddleWidth, aiY, paddleWidth, paddleHeight);
-
-            // Classic Square Ball
             ctx.fillRect(ballX, ballY, ballSize, ballSize);
 
-            // Score Display (Retro Monospace)
             ctx.font = 'bold 48px monospace';
             ctx.textAlign = 'center';
             ctx.fillText(playerScore, pongCanvas.width / 4, 60);
@@ -555,7 +542,6 @@
 
         const deletedItems = [];
 
-        // Build DOM structure
         mediaSources.forEach((src, index) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'media-wrapper';
@@ -593,7 +579,6 @@
             initInteract(wrapper);
         });
 
-        /* Absolute positioning conversion across all cards */
         function convertLayoutToAbsolute() {
             if (isLayoutInitialized) return;
 
@@ -666,15 +651,13 @@
             });
         }
 
-        /* Master Invisible 20px x 20px Button (Pong -> Dashboard -> Hidden -> Pong) */
+        /* Master Invisible 20px x 20px Button (Toggles between Pong and Dashboard) */
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (currentState === 1) {
-                showDashboard();
-            } else if (currentState === 2) {
-                hideEverything();
-            } else {
+            if (currentState === 2) {
                 showPong();
+            } else {
+                showDashboard();
             }
         });
 
@@ -817,7 +800,6 @@
                 });
             }
 
-            /* Smooth Dragging */
             element.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('resize-handle') || 
                     e.target.classList.contains('pip-btn') || 
@@ -845,7 +827,6 @@
                 document.addEventListener('mouseup', stopDrag);
             });
 
-            /* Smooth Aspect-Preserving Resizing */
             const handles = element.querySelectorAll('.resize-handle');
             handles.forEach(handle => {
                 handle.addEventListener('mousedown', (e) => {
@@ -910,7 +891,6 @@
             });
         }
 
-        // Launch Pong automatically on open
         showPong();
         updateRestoreMenu();
     </script>
