@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pong</title>
+    <title>ponggame</title>
     <style>
         body {
             margin: 0;
@@ -375,7 +375,7 @@
         }
     </style>
 </head>
-<body class="is-hidden">
+<body>
 
     <!-- Top Bar Controls -->
     <div class="top-bar">
@@ -403,7 +403,7 @@
     </div>
 
     <!-- Pong Game Modal -->
-    <div id="pongModal" class="pong-modal">
+    <div id="pongModal" class="pong-modal show">
         <div class="pong-container">
             <div class="pong-header">
                 <h3 class="pong-title">PONG ARCADE</h3>
@@ -411,7 +411,7 @@
             </div>
             <canvas id="pongCanvas" class="pong-canvas" width="800" height="500"></canvas>
             <div class="pong-controls">
-                <span class="pong-hint">Click top-left corner again or button to open dashboard</span>
+                <span class="pong-hint">Click top-left corner or button to reveal videos</span>
                 <button id="enterDashboardBtn" class="pong-btn">Enter Dashboard &rarr;</button>
             </div>
         </div>
@@ -436,8 +436,8 @@
         const enterDashboardBtn = document.getElementById('enterDashboardBtn');
         const ctx = pongCanvas.getContext('2d');
 
-        // Application State: 0 = Hidden, 1 = Pong Game, 2 = Dashboard
-        let currentState = 0;
+        // Application State: 1 = Pong Game (Default on startup), 2 = Videos Dashboard, 0 = Hidden
+        let currentState = 1;
         let isLayoutInitialized = false;
         let maxZIndex = 100;
 
@@ -707,15 +707,19 @@
             });
         }
 
-        /* Master Top-Left Toggle Button Handler (Hidden -> Pong -> Dashboard -> Hidden) */
+        /* Master Top-Left Corner Click Trigger:
+           - Pong active (1) -> Corner click -> Hide Pong & Show Videos Dashboard (2)
+           - Videos active (2) -> Corner click -> Hide Everything (0)
+           - Hidden (0) -> Corner click -> Show Pong (1)
+        */
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (currentState === 0) {
-                showPong();
-            } else if (currentState === 1) {
+            if (currentState === 1) {
                 showDashboard();
-            } else {
+            } else if (currentState === 2) {
                 hideEverything();
+            } else {
+                showPong();
             }
         });
 
@@ -954,6 +958,8 @@
             });
         }
 
+        // Initialize state on load
+        showPong();
         updateRestoreMenu();
     </script>
 </body>
