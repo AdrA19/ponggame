@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Dashboard</title>
+    <title>Pong</title>
     <style>
         body {
             margin: 0;
@@ -285,6 +285,94 @@
             height: 100%;
             border: none;
         }
+
+        /* Pong Game Overlay */
+        .pong-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0a0a0c;
+            z-index: 25000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .pong-modal.show {
+            display: flex;
+        }
+
+        body.is-hidden .pong-modal {
+            display: none !important;
+        }
+
+        .pong-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: #141418;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #2a2a32;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .pong-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .pong-title {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #3b82f6;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .pong-canvas {
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 6px;
+            cursor: none;
+        }
+
+        .pong-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .pong-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 13px;
+        }
+
+        .pong-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .pong-hint {
+            font-size: 12px;
+            color: #888;
+        }
     </style>
 </head>
 <body class="is-hidden">
@@ -314,6 +402,21 @@
         </div>
     </div>
 
+    <!-- Pong Game Modal -->
+    <div id="pongModal" class="pong-modal">
+        <div class="pong-container">
+            <div class="pong-header">
+                <h3 class="pong-title">PONG ARCADE</h3>
+                <span class="pong-hint">Move mouse up/down to move paddle</span>
+            </div>
+            <canvas id="pongCanvas" class="pong-canvas" width="800" height="500"></canvas>
+            <div class="pong-controls">
+                <span class="pong-hint">Click top-left corner again or button to open dashboard</span>
+                <button id="enterDashboardBtn" class="pong-btn">Enter Dashboard &rarr;</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const btn = document.getElementById('toggleBtn');
         const container = document.getElementById('mediaContainer');
@@ -328,10 +431,156 @@
         const iframeModal = document.getElementById('iframeModal');
         const activeIframe = document.getElementById('activeIframe');
 
-        let isAppVisible = false;
+        const pongModal = document.getElementById('pongModal');
+        const pongCanvas = document.getElementById('pongCanvas');
+        const enterDashboardBtn = document.getElementById('enterDashboardBtn');
+        const ctx = pongCanvas.getContext('2d');
+
+        // Application State: 0 = Hidden, 1 = Pong Game, 2 = Dashboard
+        let currentState = 0;
         let isLayoutInitialized = false;
         let maxZIndex = 100;
 
+        /* --- Pong Game Variables & Engine --- */
+        let pongAnimationId = null;
+        const paddleWidth = 10;
+        const paddleHeight = 80;
+        let playerY = (pongCanvas.height - paddleHeight) / 2;
+        let aiY = (pongCanvas.height - paddleHeight) / 2;
+        let playerScore = 0;
+        let aiScore = 0;
+
+        let ballX = pongCanvas.width / 2;
+        let ballY = pongCanvas.height / 2;
+        let ballSpeedX = 5;
+        let ballSpeedY = 3;
+        const ballRadius = 7;
+
+        pongCanvas.addEventListener('mousemove', (e) => {
+            const rect = pongCanvas.getBoundingClientRect();
+            const mouseY = e.clientY - rect.top;
+            playerY = mouseY - paddleHeight / 2;
+            if (playerY < 0) playerY = 0;
+            if (playerY > pongCanvas.height - paddleHeight) playerY = pongCanvas.height - paddleHeight;
+        });
+
+        function resetBall() {
+            ballX = pongCanvas.width / 2;
+            ballY = pongCanvas.height / 2;
+            ballSpeedX = (ballSpeedX > 0 ? -1 : 1) * 5;
+            ballSpeedY = (Math.random() - 0.5) * 6;
+        }
+
+        function updatePong() {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // Top / Bottom wall bounce
+            if (ballY - ballRadius < 0) {
+                ballY = ballRadius;
+                ballSpeedY = -ballSpeedY;
+            } else if (ballY + ballRadius > pongCanvas.height) {
+                ballY = pongCanvas.height - ballRadius;
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // AI paddle tracking logic
+            const aiCenter = aiY + paddleHeight / 2;
+            if (aiCenter < ballY - 12) {
+                aiY += 4.5;
+            } else if (aiCenter > ballY + 12) {
+                aiY -= 4.5;
+            }
+            if (aiY < 0) aiY = 0;
+            if (aiY > pongCanvas.height - paddleHeight) aiY = pongCanvas.height - paddleHeight;
+
+            // Player paddle collision
+            if (ballX - ballRadius <= 25 && ballX - ballRadius >= 15) {
+                if (ballY >= playerY && ballY <= playerY + paddleHeight) {
+                    ballSpeedX = -ballSpeedX * 1.05;
+                    const deltaY = ballY - (playerY + paddleHeight / 2);
+                    ballSpeedY = deltaY * 0.25;
+                    ballX = 25 + ballRadius;
+                }
+            }
+
+            // AI paddle collision
+            if (ballX + ballRadius >= pongCanvas.width - 25 && ballX + ballRadius <= pongCanvas.width - 15) {
+                if (ballY >= aiY && ballY <= aiY + paddleHeight) {
+                    ballSpeedX = -ballSpeedX * 1.05;
+                    const deltaY = ballY - (aiY + paddleHeight / 2);
+                    ballSpeedY = deltaY * 0.25;
+                    ballX = pongCanvas.width - 25 - ballRadius;
+                }
+            }
+
+            // Scoring
+            if (ballX < 0) {
+                aiScore++;
+                resetBall();
+            } else if (ballX > pongCanvas.width) {
+                playerScore++;
+                resetBall();
+            }
+        }
+
+        function drawPong() {
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, pongCanvas.width, pongCanvas.height);
+
+            // Center Net
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.moveTo(pongCanvas.width / 2, 0);
+            ctx.lineTo(pongCanvas.width / 2, pongCanvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Player Paddle
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(15, playerY, paddleWidth, paddleHeight);
+
+            // AI Paddle
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(pongCanvas.width - 25, aiY, paddleWidth, paddleHeight);
+
+            // Ball
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Scores
+            ctx.font = 'bold 36px monospace';
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillText(playerScore, pongCanvas.width / 4, 50);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillText(aiScore, (3 * pongCanvas.width) / 4, 50);
+        }
+
+        function pongLoop() {
+            updatePong();
+            drawPong();
+            pongAnimationId = requestAnimationFrame(pongLoop);
+        }
+
+        function startPong() {
+            if (!pongAnimationId) {
+                resetBall();
+                pongLoop();
+            }
+        }
+
+        function stopPong() {
+            if (pongAnimationId) {
+                cancelAnimationFrame(pongAnimationId);
+                pongAnimationId = null;
+            }
+        }
+
+        /* --- Media Dashboard & Sources Setup --- */
         const mediaSources = [
             "./videos/42920891a.mp4",
             "./videos/1.mp4",
@@ -425,20 +674,32 @@
             element.style.zIndex = maxZIndex;
         }
 
-        /* Hide Everything */
+        /* State Manager Functions */
         function hideEverything() {
-            isAppVisible = false;
+            currentState = 0;
             document.body.classList.add('is-hidden');
             container.classList.remove('show');
             iframeModal.classList.remove('show');
+            pongModal.classList.remove('show');
+            stopPong();
             activeIframe.src = '';
             muteAllVideos();
         }
 
-        /* Show Everything */
-        function showEverything() {
-            isAppVisible = true;
+        function showPong() {
+            currentState = 1;
             document.body.classList.remove('is-hidden');
+            container.classList.remove('show');
+            iframeModal.classList.remove('show');
+            pongModal.classList.add('show');
+            startPong();
+        }
+
+        function showDashboard() {
+            currentState = 2;
+            document.body.classList.remove('is-hidden');
+            pongModal.classList.remove('show');
+            stopPong();
             container.classList.add('show');
 
             requestAnimationFrame(() => {
@@ -446,14 +707,20 @@
             });
         }
 
-        /* Master Top-Left Toggle Button */
+        /* Master Top-Left Toggle Button Handler (Hidden -> Pong -> Dashboard -> Hidden) */
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (isAppVisible) {
-                hideEverything();
+            if (currentState === 0) {
+                showPong();
+            } else if (currentState === 1) {
+                showDashboard();
             } else {
-                showEverything();
+                hideEverything();
             }
+        });
+
+        enterDashboardBtn.addEventListener('click', () => {
+            showDashboard();
         });
 
         muteAllBtn.addEventListener('click', muteAllVideos);
@@ -474,10 +741,10 @@
             restoreMenu.classList.remove('show');
         });
 
-        /* FIXED: Only hide when the window/tab itself loses focus */
+        /* Hide when window/tab itself loses focus */
         window.addEventListener('blur', (e) => {
-            if (e.target !== window) return; // Ignore element focus changes
-            if (document.activeElement === activeIframe) return; // Ignore focus moving into iframe
+            if (e.target !== window) return; 
+            if (document.activeElement === activeIframe) return; 
             hideEverything();
         });
 
@@ -495,9 +762,11 @@
         function openIframe(url) {
             muteAllVideos();
             container.classList.remove('show');
+            pongModal.classList.remove('show');
+            stopPong();
             activeIframe.src = url;
             iframeModal.classList.add('show');
-            isAppVisible = true;
+            currentState = 2;
             document.body.classList.remove('is-hidden');
         }
 
