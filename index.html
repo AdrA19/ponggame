@@ -29,8 +29,7 @@
             opacity: 1;
         }
 
-        /* Disable Top Bar completely when hidden or in Pong mode */
-        body.is-hidden .top-bar,
+        /* Disable Top Bar completely in Pong mode */
         body.is-pong .top-bar {
             display: none !important;
             opacity: 0 !important;
@@ -122,10 +121,6 @@
             flex-wrap: wrap;
             align-items: flex-start;
             gap: 20px;
-        }
-
-        body.is-hidden .media-content {
-            display: none !important;
         }
 
         /* Top-Left Corner Master Trigger (Strictly 20px x 20px Invisible) */
@@ -284,10 +279,6 @@
             display: flex;
         }
 
-        body.is-hidden .iframe-modal {
-            display: none !important;
-        }
-
         .iframe-container {
             width: 100vw;
             height: 100vh;
@@ -319,10 +310,6 @@
             display: flex;
         }
 
-        body.is-hidden .pong-modal {
-            display: none !important;
-        }
-
         .pong-container {
             display: flex;
             flex-direction: column;
@@ -335,7 +322,7 @@
         .pong-canvas {
             background: #000000;
             border: 4px solid #ffffff;
-            cursor: none;
+            cursor: default; /* Mouse cursor explicitly visible */
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
         }
 
@@ -375,7 +362,7 @@
         </div>
     </div>
 
-    <!-- Classic Black & White Pong Modal -->
+    <!-- Permanent Classic Black & White Pong Display -->
     <div id="pongModal" class="pong-modal show">
         <div class="pong-container">
             <canvas id="pongCanvas" class="pong-canvas" width="800" height="500"></canvas>
@@ -401,7 +388,7 @@
         const pongCanvas = document.getElementById('pongCanvas');
         const ctx = pongCanvas.getContext('2d');
 
-        // Application State: 1 = Pong (Default), 2 = Dashboard, 0 = Hidden
+        // Application State: Strictly 1 = Pong (Default backdrop), 2 = Media Dashboard
         let currentState = 1;
         let isLayoutInitialized = false;
         let maxZIndex = 100;
@@ -421,7 +408,8 @@
         let ballSpeedY = 3;
         const ballSize = 10;
 
-        pongCanvas.addEventListener('mousemove', (e) => {
+        // Mouse Controls: Cursor visible, paddle follows vertical mouse coordinates
+        window.addEventListener('mousemove', (e) => {
             const rect = pongCanvas.getBoundingClientRect();
             const mouseY = e.clientY - rect.top;
             playerY = mouseY - paddleHeight / 2;
@@ -523,7 +511,7 @@
             }
         }
 
-        /* --- Media Dashboard & Sources Setup --- */
+        /* --- Media Dashboard Setup --- */
         const mediaSources = [
             "./videos/42920891a.mp4",
             "./videos/1.mp4",
@@ -615,32 +603,20 @@
             element.style.zIndex = maxZIndex;
         }
 
-        /* State Manager Functions */
-        function hideEverything() {
-            currentState = 0;
-            document.body.classList.add('is-hidden');
-            document.body.classList.remove('is-pong');
-            container.classList.remove('show');
-            iframeModal.classList.remove('show');
-            pongModal.classList.remove('show');
-            stopPong();
-            activeIframe.src = '';
-            muteAllVideos();
-        }
-
+        /* Strict State Managers: Pong is Default, Media is Shown ONLY on Toggle */
         function showPong() {
             currentState = 1;
-            document.body.classList.remove('is-hidden');
             document.body.classList.add('is-pong');
             container.classList.remove('show');
             iframeModal.classList.remove('show');
             pongModal.classList.add('show');
+            activeIframe.src = '';
+            muteAllVideos();
             startPong();
         }
 
         function showDashboard() {
             currentState = 2;
-            document.body.classList.remove('is-hidden');
             document.body.classList.remove('is-pong');
             pongModal.classList.remove('show');
             stopPong();
@@ -651,7 +627,7 @@
             });
         }
 
-        /* Master Invisible 20px x 20px Button (Toggles between Pong and Dashboard) */
+        /* Toggle Button switches strictly between Pong and Media */
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (currentState === 2) {
@@ -679,21 +655,20 @@
             restoreMenu.classList.remove('show');
         });
 
-        /* Hide when window/tab loses focus */
+        /* Window Blur / Hide / Escape actions IMMEDIATELY revert to Pong (Never Blank) */
         window.addEventListener('blur', (e) => {
             if (e.target !== window) return; 
             if (document.activeElement === activeIframe) return; 
-            hideEverything();
+            showPong();
         });
 
-        window.addEventListener('pagehide', hideEverything);
+        window.addEventListener('pagehide', showPong);
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) hideEverything();
+            if (document.hidden) showPong();
         });
 
-        /* Escape key shortcut */
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') hideEverything();
+            if (e.key === 'Escape') showPong();
         });
 
         /* Iframe Management */
@@ -705,7 +680,6 @@
             activeIframe.src = url;
             iframeModal.classList.add('show');
             currentState = 2;
-            document.body.classList.remove('is-hidden');
             document.body.classList.remove('is-pong');
         }
 
@@ -891,6 +865,7 @@
             });
         }
 
+        // Initialize: Launch straight into Pong, update menu
         showPong();
         updateRestoreMenu();
     </script>
