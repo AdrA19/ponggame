@@ -513,19 +513,19 @@
 
         /* --- Media Dashboard Setup --- */
         const mediaSources = [
-            "./videos/42920891a.mp4",
-            "./videos/1.mp4",
-            "./videos/2.mp4",
-            "./videos/3.mp4",
-            "./videos/4.mp4",
-            "./videos/5.mp4",
-            "./videos/26037237.gif",
-            "./videos/11.mp4",
-            "./videos/21.mp4",
-            "./videos/34.mp4",
-            "./videos/54.mp4",
-            "./videos/324.mp4",
-            "./videos/65.mp4"
+            "assets/videos/42920891a.mp4",
+            "assets/videos/1.mp4",
+            "assets/videos/2.mp4",
+            "assets/videos/3.mp4",
+            "assets/videos/4.mp4",
+            "assets/videos/5.mp4",
+            "assets/videos/26037237.gif",
+            "assets/videos/11.mp4",
+            "assets/videos/21.mp4",
+            "assets/videos/34.mp4",
+            "assets/videos/54.mp4",
+            "assets/videos/324.mp4",
+            "assets/videos/65.mp4"
         ];
 
         const deletedItems = [];
@@ -537,7 +537,7 @@
             wrapper.dataset.filename = src.split('/').pop();
             
             const isVideo = src.endsWith('.mp4');
-            let htmlContent = `<button class="delete-btn" title="Delete">&times;</button>`;
+            let htmlContent = `<button class="delete-btn" title="Delete">×</button>`;
             
             if (isVideo) {
                 htmlContent += `
